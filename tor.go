@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -41,19 +40,16 @@ func startTor(torPath string) error {
 	if err != nil {
 		return err
 	}
-	buf := bufio.NewReader(stdout)
+	s := bufio.NewScanner(stdout)
 
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	for {
-		line, err := buf.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				return errors.New("tor did not bootstrap")
-			}
-			return err
+	for s.Scan() {
+		line := s.Text()
+		if strings.Contains(line, "Bootstrapped 100%: Done") {
+			return nil
 		}
 
 		if time.Now().After(timeout) {
@@ -61,12 +57,9 @@ func startTor(torPath string) error {
 			if err != nil {
 				return err
 			}
-			return errors.New("process killed because of timeout")
-		}
-
-		if strings.Contains(line, "Bootstrapped 100%: Done") {
-			break
+			return errors.New("tor process killed because of timeout")
 		}
 	}
-	return nil
+
+	return errors.New("tor did not bootstrap")
 }
