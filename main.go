@@ -25,4 +25,10 @@ func main() {
 	if err := t.startTor(); err != nil {
 		log.Fatal(err)
 	}
+
+	if t.running {
+		if err := t.stopTor(); err != nil {
+			log.Fatal(err)
+		}
+	}
 }

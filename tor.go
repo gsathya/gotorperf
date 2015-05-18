@@ -15,16 +15,16 @@ var init_timeout = 90 * time.Second
 
 type Tor struct {
 	path    string
-	cmd     *exec.Cmd
 	timeout time.Duration
+	cmd     *exec.Cmd
 	running bool
 }
 
 func NewTor(torPath string) *Tor {
 	return &Tor{
 		torPath,
-		nil,
 		90,
+		nil,
 		false,
 	}
 }
@@ -49,21 +49,21 @@ func (t *Tor) startTor() error {
 		return fmt.Errorf(t.path, " is a directory, not the tor executable")
 	}
 
-	timeout := time.Now().Add(init_timeout)
 	t.cmd = exec.Command(t.path)
-
 	stdout, err := t.cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
 	s := bufio.NewScanner(stdout)
 
+	timeout := time.Now().Add(init_timeout)
 	if err := t.cmd.Start(); err != nil {
 		return err
 	}
 
 	for s.Scan() {
 		line := s.Text()
+		log.Print(line)
 		if strings.Contains(line, "Bootstrapped 100%: Done") {
 			t.running = true
 			return nil
@@ -79,4 +79,11 @@ func (t *Tor) startTor() error {
 	}
 
 	return errors.New("tor did not bootstrap")
+}
+
+func (t *Tor) stopTor() error {
+	if err := t.cmd.Process.Kill(); err != nil {
+		return err
+	}
+	return nil
 }
