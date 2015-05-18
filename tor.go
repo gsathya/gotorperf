@@ -13,47 +13,64 @@ import (
 
 var init_timeout = 90 * time.Second
 
-func startTor(torPath string) error {
+type Tor struct {
+	path    string
+	cmd     *exec.Cmd
+	timeout time.Duration
+	running bool
+}
+
+func NewTor(torPath string) *Tor {
+	return &Tor{
+		torPath,
+		nil,
+		90,
+		false,
+	}
+}
+
+func (t *Tor) startTor() error {
 	var err error
 	log.Println("starting tor")
 
-	if torPath == "" {
-		torPath, err = exec.LookPath("tor")
+	if t.path == "" {
+		t.path, err = exec.LookPath("tor")
 		if err != nil {
 			return errors.New("tor not found in $PATH")
 		}
 	}
 
-	f, err := os.Stat(torPath)
+	f, err := os.Stat(t.path)
 	if err != nil {
 		return err
 	}
 
 	if f.IsDir() {
-		return fmt.Errorf(torPath, " is a directory, not the tor executable")
+		return fmt.Errorf(t.path, " is a directory, not the tor executable")
 	}
 
 	timeout := time.Now().Add(init_timeout)
-	cmd := exec.Command(torPath)
+	t.cmd = exec.Command(t.path)
 
-	stdout, err := cmd.StdoutPipe()
+	stdout, err := t.cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
 	s := bufio.NewScanner(stdout)
 
-	if err := cmd.Start(); err != nil {
+	if err := t.cmd.Start(); err != nil {
 		return err
 	}
 
 	for s.Scan() {
 		line := s.Text()
 		if strings.Contains(line, "Bootstrapped 100%: Done") {
+			t.running = true
 			return nil
 		}
 
 		if time.Now().After(timeout) {
-			err = cmd.Process.Kill()
+			err = t.cmd.Process.Kill()
 			if err != nil {
 				return err
 			}

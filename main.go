@@ -21,7 +21,8 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	if err := startTor(*torPath); err != nil {
+	t := NewTor(*torPath)
+	if err := t.startTor(); err != nil {
 		log.Fatal(err)
 	}
 }
