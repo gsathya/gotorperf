@@ -14,8 +14,7 @@ import (
 
 var bootstrap_timeout = 90 * time.Second
 
-type Config map[string]string
-type Torrc *os.File
+type Torrc map[string]string
 
 type Tor struct {
 	path    string
@@ -33,7 +32,7 @@ func NewTor(torPath string) *Tor {
 	}
 }
 
-func (t *Tor) StartWithConfig(c Config) (err error) {
+func (t *Tor) StartWithConfig(c Torrc) (err error) {
 	f, err := ioutil.TempFile("", "torrc")
 	if err != nil {
 		return err
