@@ -25,11 +25,10 @@ func main() {
 	if err := t.Start(); err != nil {
 		log.Fatal(err)
 	}
+
 	defer func() {
-		if t.running {
-			if err := t.Stop(); err != nil {
-				log.Fatal(err)
-			}
+		if err := t.Stop(); err != nil {
+			log.Fatal(err)
 		}
 	}()
 }

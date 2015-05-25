@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -13,8 +14,12 @@ import (
 
 var bootstrap_timeout = 90 * time.Second
 
+type Config map[string]string
+type Torrc *os.File
+
 type Tor struct {
 	path    string
+	args    []string
 	cmd     *exec.Cmd
 	running bool
 }
@@ -22,12 +27,47 @@ type Tor struct {
 func NewTor(torPath string) *Tor {
 	return &Tor{
 		torPath,
+		make([]string, 0),
 		nil,
 		false,
 	}
 }
 
+func (t *Tor) StartWithConfig(c Config) (err error) {
+	f, err := ioutil.TempFile("", "torrc")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if ferr := f.Close(); err != nil {
+			err = ferr
+		}
+
+		if ferr := os.Remove(f.Name()); err != nil {
+			err = ferr
+		}
+	}()
+
+	// we need to bea sure that we're logging to stdout to figure out when we're
+	// done bootstrapping
+	fmt.Fprintf(f, "Log NOTICE stdout\n")
+
+	for key, val := range c {
+		fmt.Fprintf(f, "%s %s\n", key, val)
+	}
+
+	t.args = append(t.args, "-f", f.Name())
+	if err := t.startTor(); err != nil {
+		return err
+	}
+	return
+}
+
 func (t *Tor) Start() error {
+	return t.startTor()
+}
+
+func (t *Tor) startTor() error {
 	var err error
 	log.Println("starting tor")
 
@@ -47,7 +87,7 @@ func (t *Tor) Start() error {
 		return fmt.Errorf(t.path, " is a directory, not the tor executable")
 	}
 
-	t.cmd = exec.Command(t.path)
+	t.cmd = exec.Command(t.path, t.args...)
 	stdout, err := t.cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -61,7 +101,7 @@ func (t *Tor) Start() error {
 
 	for s.Scan() {
 		line := s.Text()
-
+		log.Println(line)
 		if strings.Contains(line, "Bootstrapped 100%: Done") {
 			t.running = true
 			return nil
@@ -80,8 +120,13 @@ func (t *Tor) Start() error {
 }
 
 func (t *Tor) Stop() error {
+	log.Println("stopping tor")
+	if !t.running {
+		return nil
+	}
 	if err := t.cmd.Process.Kill(); err != nil {
 		return err
 	}
+	t.running = false
 	return nil
 }
