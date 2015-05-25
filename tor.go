@@ -11,11 +11,10 @@ import (
 	"time"
 )
 
-var init_timeout = 90 * time.Second
+var bootstrap_timeout = 90 * time.Second
 
 type Tor struct {
 	path    string
-	timeout time.Duration
 	cmd     *exec.Cmd
 	running bool
 }
@@ -23,7 +22,6 @@ type Tor struct {
 func NewTor(torPath string) *Tor {
 	return &Tor{
 		torPath,
-		90,
 		nil,
 		false,
 	}
@@ -56,7 +54,7 @@ func (t *Tor) Start() error {
 	}
 	s := bufio.NewScanner(stdout)
 
-	timeout := time.Now().Add(init_timeout)
+	timeout := time.Now().Add(bootstrap_timeout)
 	if err := t.cmd.Start(); err != nil {
 		return err
 	}
