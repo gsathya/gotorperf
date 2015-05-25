@@ -11,7 +11,16 @@ type Config struct {
 	torPath *string
 }
 
+type Experiment interface {
+	Run() error
+}
+
 var conf Config
+var experiments map[string]Experiment
+
+func init() {
+	experiments = make(map[string]Experiment)
+}
 
 func main() {
 	// command line args
@@ -28,14 +37,10 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	t := NewTor(*conf.torPath)
-	if err := t.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	defer func() {
-		if err := t.Stop(); err != nil {
-			log.Fatal(err)
+	for name, exp := range experiments {
+		log.Printf("running experiment: %s", name)
+		if err := exp.Run(); err != nil {
+			log.Print(err)
 		}
-	}()
+	}
 }
