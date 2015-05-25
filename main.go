@@ -22,15 +22,14 @@ func main() {
 	}
 
 	t := NewTor(*torPath)
-	if err := t.startTor(); err != nil {
+	if err := t.Start(); err != nil {
 		log.Fatal(err)
 	}
 	defer func() {
 		if t.running {
-			if err := t.stopTor(); err != nil {
+			if err := t.Stop(); err != nil {
 				log.Fatal(err)
 			}
 		}
 	}()
-
 }

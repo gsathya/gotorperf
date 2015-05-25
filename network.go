@@ -1,3 +1,5 @@
+package main
+
 import (
 	"crypto/rand"
 	"encoding/base32"
@@ -7,7 +9,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-func createSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Client, error) {
+func NewSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Client, error) {
 	// We generate a random username so that Tor will decouple all of our
 	// connections.
 	username := make([]byte, 8)
@@ -26,7 +28,7 @@ func createSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Cli
 	}
 
 	tr := &http.Transport{Dial: dialer.Dial}
-	httpClient := &http.Client{Transport: tr, Timeout: iimeout}
+	httpClient := &http.Client{Transport: tr, Timeout: timeout}
 
 	return httpClient, nil
 }

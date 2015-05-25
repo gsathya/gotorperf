@@ -29,7 +29,7 @@ func NewTor(torPath string) *Tor {
 	}
 }
 
-func (t *Tor) startTor() error {
+func (t *Tor) Start() error {
 	var err error
 	log.Println("starting tor")
 
@@ -63,7 +63,7 @@ func (t *Tor) startTor() error {
 
 	for s.Scan() {
 		line := s.Text()
-		log.Print(line)
+
 		if strings.Contains(line, "Bootstrapped 100%: Done") {
 			t.running = true
 			return nil
@@ -81,7 +81,7 @@ func (t *Tor) startTor() error {
 	return errors.New("tor did not bootstrap")
 }
 
-func (t *Tor) stopTor() error {
+func (t *Tor) Stop() error {
 	if err := t.cmd.Process.Kill(); err != nil {
 		return err
 	}
