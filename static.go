@@ -12,18 +12,25 @@ import (
 
 const (
 	http_read_len = 16
-	uri           = "https://torperf.torproject.org:80/.50kbfile"
+	uri           = "https://torperf.torproject.org:80/%s"
 	torAddr       = "127.0.0.1:9050"
 	request       = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
 		"Host: %s\r\n\r\n"
 )
 
-var startTime time.Time
+var (
+	startTime time.Time
+)
 
 type StaticFileExperiment struct{}
 
 func (s StaticFileExperiment) Run() (err error) {
-	sfd := StaticFileDownload{}
+	sfd := StaticFileDownload{
+		uri:          fmt.Sprintf(uri, ".50kbfile"),
+		expected:     51200,
+		dataperctime: make([]time.Duration, 9),
+	}
+
 	if err = sfd.run(); err != nil {
 		return err
 	}
@@ -31,11 +38,11 @@ func (s StaticFileExperiment) Run() (err error) {
 }
 
 type StaticFileDownload struct {
-	receivedBytes int
-	sentBytes     int
+	uri string
 
-	payloadSize  int
-	expectedSize int
+	received int
+	expected int
+	sent     int
 
 	datarequest  time.Duration
 	dataresponse time.Duration
@@ -44,21 +51,31 @@ type StaticFileDownload struct {
 }
 
 func (s *StaticFileDownload) ReadFrom(r io.Reader) (err error) {
-	p := make([]byte, http_read_len)
-	s.dataperctime = make([]time.Duration, 9)
-	s.receivedBytes = 0
-	s.expectedSize = 51200
-	decile := -1
+	var (
+		buf    = make([]byte, http_read_len)
+		decile = -1
+	)
 
 	log.Println("reading response")
 	for {
-		n, err := r.Read(p)
-		s.receivedBytes += n
-		for s.receivedBytes < s.expectedSize &&
-			s.receivedBytes*10/s.expectedSize > decile+1 {
+		n, err := r.Read(buf)
+
+		// Get when start of response was received
+		if n > 0 && s.received == 0 {
+			s.dataresponse = time.Since(startTime)
+		}
+
+		s.received += n
+
+		// Get when the next 10% of expected bytes are received; this is a
+		// while loop for cases when we expect only very few bytes and read
+		// more than 10% of them in a single read_all() call.
+		for s.received < s.expected &&
+			s.received*10/s.expected > decile+1 {
 			decile += 1
 			s.dataperctime[decile] = time.Since(startTime)
 		}
+
 		if err != nil {
 			if err != io.EOF {
 				return err
@@ -80,7 +97,7 @@ func (s *StaticFileDownload) run() (err error) {
 		}
 	}()
 
-	u, err := url.Parse(uri)
+	u, err := url.Parse(s.uri)
 	if err != nil {
 		return err
 	}
@@ -99,18 +116,19 @@ func (s *StaticFileDownload) run() (err error) {
 	}
 
 	req := fmt.Sprintf(request, u.Path, u.Host)
+	s.sent = len(req)
 	log.Printf("request: %s", req)
 
 	log.Println("sending request")
 	fmt.Fprintf(conn, req)
+	// Get when request is sent
 	s.datarequest = time.Since(startTime)
 
-	err = s.ReadFrom(conn)
-	if err != nil {
+	if err = s.ReadFrom(conn); err != nil {
 		return err
 	}
 	s.datacomplete = time.Since(startTime)
-	log.Println("total size of response", s.receivedBytes)
+	log.Println("total size of response", s.received)
 	log.Println("dataperctime", s.dataperctime)
 	return
 }
