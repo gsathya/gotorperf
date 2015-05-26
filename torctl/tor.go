@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var bootstrap_timeout = 90 * time.Second
+const bootstrap_timeout = 90 * time.Second
 
 type Torrc map[string]string
 

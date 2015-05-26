@@ -11,7 +11,7 @@ import (
 	"github.com/gsathya/torperf/torctl"
 )
 
-var (
+const (
 	uri     = "https://torperf.torproject.org:80/.50kbfile"
 	torAddr = "127.0.0.1:9050"
 	request = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
