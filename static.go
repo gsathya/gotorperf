@@ -65,7 +65,7 @@ func (s StaticFileDownload) run() (err error) {
 	req := fmt.Sprintf(request, u.Path, u.Host)
 	log.Printf("request: %s", req)
 
-	log.Println("writing request")
+	log.Println("sending request")
 	fmt.Fprintf(conn, req)
 
 	log.Println("reading response")
