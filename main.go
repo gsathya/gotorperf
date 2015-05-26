@@ -11,9 +11,8 @@ type Config struct {
 	torPath *string
 }
 
-type Experiment func() (err error)
+type Experiment func(c *Config) (err error)
 
-var conf Config
 var experiments map[string]Experiment
 
 func init() {
@@ -21,6 +20,7 @@ func init() {
 }
 
 func main() {
+	var conf Config
 	// command line args
 	conf.logPath = flag.String("log", "", "path to log file; otherwise stdout")
 	conf.torPath = flag.String("tor", "", "path to tor binary; otherwise uses $PATH")
@@ -37,7 +37,7 @@ func main() {
 
 	for name, exp := range experiments {
 		log.Printf("running experiment: %s", name)
-		if err := exp(); err != nil {
+		if err := exp(&conf); err != nil {
 			log.Print(err)
 		}
 	}

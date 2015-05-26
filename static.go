@@ -20,14 +20,25 @@ const (
 
 var (
 	startTime time.Time
+	t         *torctl.Tor
 )
 
-func StaticFileExperimentRunner() (err error) {
+func StaticFileExperimentRunner(c *Config) (err error) {
 	sfd := StaticFileDownload{
 		uri:          fmt.Sprintf(uri, ".50kbfile"),
 		expected:     51200,
 		dataperctime: make([]time.Duration, 9),
 	}
+
+	t := torctl.NewTor(*c.torPath)
+	if err = t.Start(); err != nil {
+		return err
+	}
+	defer func() {
+		if terr := t.Stop(); err != nil {
+			err = terr
+		}
+	}()
 
 	if err = sfd.run(); err != nil {
 		return
@@ -85,16 +96,6 @@ func (s *StaticFileDownload) ReadFrom(r io.Reader) (err error) {
 }
 
 func (s *StaticFileDownload) run() (err error) {
-	t := torctl.NewTor(*conf.torPath)
-	if err = t.Start(); err != nil {
-		return err
-	}
-	defer func() {
-		if terr := t.Stop(); err != nil {
-			err = terr
-		}
-	}()
-
 	u, err := url.Parse(s.uri)
 	if err != nil {
 		return err
