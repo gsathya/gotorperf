@@ -30,7 +30,7 @@ func StaticFileExperimentRunner() (err error) {
 	}
 
 	if err = sfd.run(); err != nil {
-		return err
+		return
 	}
 	return
 }
