@@ -11,9 +11,7 @@ type Config struct {
 	torPath *string
 }
 
-type Experiment interface {
-	Run() error
-}
+type Experiment func() (err error)
 
 var conf Config
 var experiments map[string]Experiment
@@ -39,7 +37,7 @@ func main() {
 
 	for name, exp := range experiments {
 		log.Printf("running experiment: %s", name)
-		if err := exp.Run(); err != nil {
+		if err := exp(); err != nil {
 			log.Print(err)
 		}
 	}

@@ -22,9 +22,7 @@ var (
 	startTime time.Time
 )
 
-type StaticFileExperiment struct{}
-
-func (s StaticFileExperiment) Run() (err error) {
+func StaticFileExperimentRunner() (err error) {
 	sfd := StaticFileDownload{
 		uri:          fmt.Sprintf(uri, ".50kbfile"),
 		expected:     51200,
@@ -134,5 +132,5 @@ func (s *StaticFileDownload) run() (err error) {
 }
 
 func init() {
-	experiments["static_file_download"] = StaticFileExperiment{}
+	experiments["static_file_download"] = StaticFileExperimentRunner
 }
