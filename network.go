@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-func NewSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Client, error) {
+func NewSocksfiedDialer(torAddr string) (proxy.Dialer, error) {
 	// We generate a random username so that Tor will decouple all of our
 	// connections.
 	username := make([]byte, 8)
@@ -22,7 +22,16 @@ func NewSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Client
 		Password: "password",
 	}
 
+	// XXX: set timeout for proxy.Direct (which uses a net.Dialer)
 	dialer, err := proxy.SOCKS5("tcp", torAddr, &auth, proxy.Direct)
+	if err != nil {
+		return nil, err
+	}
+	return dialer, nil
+}
+
+func NewSocksfiedHTTPClient(torAddr string, timeout time.Duration) (*http.Client, error) {
+	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
 		return nil, err
 	}
