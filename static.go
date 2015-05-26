@@ -19,8 +19,8 @@ const (
 )
 
 var (
-	startTime time.Time
-	t         *torctl.Tor
+	start time.Time
+	t     *torctl.Tor
 )
 
 func StaticFileExperimentRunner(c *Config) (err error) {
@@ -71,7 +71,7 @@ func (s *StaticFileDownload) ReadFrom(r io.Reader) (err error) {
 
 		// Get when start of response was received
 		if n > 0 && s.received == 0 {
-			s.dataresponse = time.Since(startTime)
+			s.dataresponse = time.Since(start)
 		}
 
 		s.received += n
@@ -82,7 +82,7 @@ func (s *StaticFileDownload) ReadFrom(r io.Reader) (err error) {
 		for s.received < s.expected &&
 			s.received*10/s.expected > decile+1 {
 			decile += 1
-			s.dataperctime[decile] = time.Since(startTime)
+			s.dataperctime[decile] = time.Since(start)
 		}
 
 		if err != nil {
@@ -101,7 +101,7 @@ func (s *StaticFileDownload) run() (err error) {
 		return err
 	}
 
-	startTime = time.Now()
+	start = time.Now()
 	log.Println("creating socksfied dialer")
 	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
@@ -121,12 +121,12 @@ func (s *StaticFileDownload) run() (err error) {
 	log.Println("sending request")
 	fmt.Fprintf(conn, req)
 	// Get when request is sent
-	s.datarequest = time.Since(startTime)
+	s.datarequest = time.Since(start)
 
 	if err = s.ReadFrom(conn); err != nil {
 		return err
 	}
-	s.datacomplete = time.Since(startTime)
+	s.datacomplete = time.Since(start)
 	log.Println("total size of response", s.received)
 	log.Println("dataperctime", s.dataperctime)
 	return
