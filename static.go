@@ -24,7 +24,7 @@ var (
 )
 
 func StaticFileExperimentRunner(c *Config) (err error) {
-	sfd := StaticFileDownload{
+	s := StaticFileDownload{
 		uri:          fmt.Sprintf(uri, ".50kbfile"),
 		expected:     51200,
 		dataperctime: make([]time.Duration, 9),
@@ -40,7 +40,7 @@ func StaticFileExperimentRunner(c *Config) (err error) {
 		}
 	}()
 
-	if err = sfd.run(); err != nil {
+	if err = s.run(); err != nil {
 		return
 	}
 	return
@@ -126,7 +126,9 @@ func (s *StaticFileDownload) run() (err error) {
 	if err = s.ReadFrom(conn); err != nil {
 		return err
 	}
+	// Get when response is complete
 	s.datacomplete = time.Since(start)
+
 	log.Println("total size of response", s.received)
 	log.Println("dataperctime", s.dataperctime)
 	return
