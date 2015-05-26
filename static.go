@@ -1,20 +1,40 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
+	"net/url"
+	"time"
 
 	"github.com/gsathya/torperf/torctl"
 )
 
-var url = "http://torperf.torproject.org/.50kbfile"
-var files = []string{".50kbfile"}
+var (
+	uri     = "https://torperf.torproject.org:80/.50kbfile"
+	torAddr = "127.0.0.1:9050"
+	request = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
+		"Host: %s\r\n\r\n"
+)
 
-type StaticFileDownload struct{}
+type StaticFileExperiment struct{}
 
-func (s StaticFileDownload) Run() (err error) {
+func (s StaticFileExperiment) Run() (err error) {
+	sfd := StaticFileDownload{}
+	if err = sfd.run(); err != nil {
+		return err
+	}
+	return
+}
+
+type StaticFileDownload struct {
+	datarequest  time.Duration
+	dataresponse time.Duration
+	datacomplete time.Duration
+}
+
+func (s StaticFileDownload) run() (err error) {
 	t := torctl.NewTor(*conf.torPath)
 	if err = t.Start(); err != nil {
 		return err
@@ -25,30 +45,38 @@ func (s StaticFileDownload) Run() (err error) {
 		}
 	}()
 
-	client, err := NewSocksfiedHTTPClient("127.0.0.1:9050", 0)
+	u, err := url.Parse(uri)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	log.Println("creating socksfied dialer")
+	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
 		return err
 	}
-	req.Header.Add("Content-Type", "application/octet-stream")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 
-	n, err := io.Copy(ioutil.Discard, resp.Body)
+	log.Println("dialing tcp")
+	conn, err := dialer.Dial("tcp", u.Host)
 	if err != nil {
 		return err
 	}
-	log.Println("total size of payload", n)
+
+	req := fmt.Sprintf(request, u.Path, u.Host)
+	log.Printf("request: %s", req)
+
+	log.Println("writing request")
+	fmt.Fprintf(conn, req)
+
+	log.Println("reading response")
+	n, err := io.Copy(ioutil.Discard, conn)
+	if err != nil {
+		return err
+	}
+	log.Println("total size of response", n)
 	return
 }
 
 func init() {
-	experiments["static_file_download"] = StaticFileDownload{}
+	experiments["static_file_download"] = StaticFileExperiment{}
 }
