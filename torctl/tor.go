@@ -14,6 +14,7 @@ import (
 
 const timeout = 90 * time.Second
 
+//XXX: Support multi-value config
 type Torrc map[string]string
 
 type Tor struct {
@@ -47,7 +48,7 @@ func (t *Tor) StartWithConfig(c Torrc) (err error) {
 		}
 	}()
 
-	// we need to bea sure that we're logging to stdout to figure out when we're
+	// we need to be sure that we're logging to stdout to figure out when we're
 	// done bootstrapping
 	fmt.Fprintf(f, "Log NOTICE stdout\n")
 

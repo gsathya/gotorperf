@@ -20,8 +20,7 @@ const (
 )
 
 var (
-	start time.Time
-	t     *torctl.Tor
+	t *torctl.Tor
 )
 
 type StaticFileDownload struct {
@@ -31,6 +30,7 @@ type StaticFileDownload struct {
 	Expected int
 	Sent     int
 
+	Start        time.Time
 	Datarequest  time.Duration
 	Dataresponse time.Duration
 	Datacomplete time.Duration
@@ -43,7 +43,7 @@ func (s *StaticFileDownload) run() (err error) {
 		return err
 	}
 
-	start = time.Now()
+	s.Start = time.Now()
 	log.Println("creating socksfied dialer")
 	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
@@ -63,13 +63,13 @@ func (s *StaticFileDownload) run() (err error) {
 	log.Println("sending request")
 	fmt.Fprintf(conn, req)
 	// Get when request is sent
-	s.Datarequest = time.Since(start)
+	s.Datarequest = time.Since(s.Start)
 
 	if err = s.read(conn); err != nil {
 		return err
 	}
 	// Get when response is complete
-	s.Datacomplete = time.Since(start)
+	s.Datacomplete = time.Since(s.Start)
 
 	log.Println("total size of response", s.Received)
 	log.Println("dataperctime", s.Dataperctime)
@@ -89,7 +89,7 @@ func (s *StaticFileDownload) read(r io.Reader) (err error) {
 
 		// Get when start of response was received
 		if n > 0 && s.Received == 0 {
-			s.Dataresponse = time.Since(start)
+			s.Dataresponse = time.Since(s.Start)
 		}
 
 		s.Received += n
@@ -100,7 +100,7 @@ func (s *StaticFileDownload) read(r io.Reader) (err error) {
 		for s.Received < s.Expected &&
 			s.Received*10/s.Expected > decile+1 {
 			decile += 1
-			s.Dataperctime[decile] = time.Since(start)
+			s.Dataperctime[decile] = time.Since(s.Start)
 		}
 
 		if err != nil {
