@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	logPath *string
-	torPath *string
+	logPath    *string
+	torPath    *string
+	outputPath *string
 }
 
-type Experiment func(c *Config) (err error)
+type Experiment func(c *Config) (result []byte, err error)
 
 var experiments map[string]Experiment
 
@@ -21,9 +22,11 @@ func init() {
 
 func main() {
 	var conf Config
+
 	// command line args
 	conf.logPath = flag.String("log", "", "path to log file; otherwise stdout")
 	conf.torPath = flag.String("tor", "", "path to tor binary; otherwise uses $PATH")
+	conf.outputPath = flag.String("output", "", "path to output file; otherwise uses stdout")
 	flag.Parse()
 
 	// log to file
@@ -37,8 +40,12 @@ func main() {
 
 	for name, exp := range experiments {
 		log.Printf("running experiment: %s", name)
-		if err := exp(&conf); err != nil {
+		result, err := exp(&conf)
+		if err != nil {
 			log.Print(err)
+			continue
 		}
+
+		log.Println(string(result))
 	}
 }

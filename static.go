@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -23,80 +24,21 @@ var (
 	t     *torctl.Tor
 )
 
-func StaticFileExperimentRunner(c *Config) (err error) {
-	s := StaticFileDownload{
-		uri:          fmt.Sprintf(uri, ".50kbfile"),
-		expected:     51200,
-		dataperctime: make([]time.Duration, 9),
-	}
-
-	t := torctl.NewTor(*c.torPath)
-	if err = t.Start(); err != nil {
-		return err
-	}
-	defer func() {
-		if terr := t.Stop(); err != nil {
-			err = terr
-		}
-	}()
-
-	if err = s.run(); err != nil {
-		return
-	}
-	return
-}
-
 type StaticFileDownload struct {
-	uri string
+	Uri string
 
-	received int
-	expected int
-	sent     int
+	Received int
+	Expected int
+	Sent     int
 
-	datarequest  time.Duration
-	dataresponse time.Duration
-	datacomplete time.Duration
-	dataperctime []time.Duration
-}
-
-func (s *StaticFileDownload) ReadFrom(r io.Reader) (err error) {
-	var (
-		buf    = make([]byte, http_read_len)
-		decile = -1
-	)
-
-	log.Println("reading response")
-	for {
-		n, err := r.Read(buf)
-
-		// Get when start of response was received
-		if n > 0 && s.received == 0 {
-			s.dataresponse = time.Since(start)
-		}
-
-		s.received += n
-
-		// Get when the next 10% of expected bytes are received; this is a
-		// while loop for cases when we expect only very few bytes and read
-		// more than 10% of them in a single read_all() call.
-		for s.received < s.expected &&
-			s.received*10/s.expected > decile+1 {
-			decile += 1
-			s.dataperctime[decile] = time.Since(start)
-		}
-
-		if err != nil {
-			if err != io.EOF {
-				return err
-			}
-			break
-		}
-	}
-	return nil
+	Datarequest  time.Duration
+	Dataresponse time.Duration
+	Datacomplete time.Duration
+	Dataperctime []time.Duration
 }
 
 func (s *StaticFileDownload) run() (err error) {
-	u, err := url.Parse(s.uri)
+	u, err := url.Parse(s.Uri)
 	if err != nil {
 		return err
 	}
@@ -115,23 +57,84 @@ func (s *StaticFileDownload) run() (err error) {
 	}
 
 	req := fmt.Sprintf(request, u.Path, u.Host)
-	s.sent = len(req)
+	s.Sent = len(req)
 	log.Printf("request: %s", req)
 
 	log.Println("sending request")
 	fmt.Fprintf(conn, req)
 	// Get when request is sent
-	s.datarequest = time.Since(start)
+	s.Datarequest = time.Since(start)
 
-	if err = s.ReadFrom(conn); err != nil {
+	if err = s.read(conn); err != nil {
 		return err
 	}
 	// Get when response is complete
-	s.datacomplete = time.Since(start)
+	s.Datacomplete = time.Since(start)
 
-	log.Println("total size of response", s.received)
-	log.Println("dataperctime", s.dataperctime)
+	log.Println("total size of response", s.Received)
+	log.Println("dataperctime", s.Dataperctime)
 	return
+}
+
+func (s *StaticFileDownload) read(r io.Reader) (err error) {
+	var (
+		n      = 0
+		buf    = make([]byte, http_read_len)
+		decile = -1
+	)
+
+	log.Println("reading response")
+	for {
+		n, err = r.Read(buf)
+
+		// Get when start of response was received
+		if n > 0 && s.Received == 0 {
+			s.Dataresponse = time.Since(start)
+		}
+
+		s.Received += n
+
+		// Get when the next 10% of expected bytes are received; this is a
+		// while loop for cases when we expect only very few bytes and read
+		// more than 10% of them in a single read_all() call.
+		for s.Received < s.Expected &&
+			s.Received*10/s.Expected > decile+1 {
+			decile += 1
+			s.Dataperctime[decile] = time.Since(start)
+		}
+
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
+		}
+	}
+	return nil
+}
+
+func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
+	s := StaticFileDownload{
+		Uri:          fmt.Sprintf(uri, ".50kbfile"),
+		Expected:     51200,
+		Dataperctime: make([]time.Duration, 9),
+	}
+
+	t := torctl.NewTor(*c.torPath)
+	if err = t.Start(); err != nil {
+		return nil, err
+	}
+	defer func() {
+		if terr := t.Stop(); err != nil {
+			err = terr
+		}
+	}()
+
+	if err = s.run(); err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(s)
 }
 
 func init() {
