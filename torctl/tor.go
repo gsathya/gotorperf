@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const bootstrap_timeout = 90 * time.Second
+const timeout = 90 * time.Second
 
 type Torrc map[string]string
 
@@ -90,7 +90,7 @@ func (t *Tor) startTor() error {
 	}
 	s := bufio.NewScanner(stdout)
 
-	timeout := time.Now().Add(bootstrap_timeout)
+	timeout := time.Now().Add(timeout)
 	if err := t.cmd.Start(); err != nil {
 		return err
 	}
