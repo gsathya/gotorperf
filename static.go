@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	http_read_len = 16
-	uri           = "https://torperf.torproject.org:80/%s"
-	torAddr       = "127.0.0.1:9050"
-	request       = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
+	httpBufLen = 16 // Inherited from the original C codebase
+	uri        = "https://torperf.torproject.org:80/%s"
+	torAddr    = "127.0.0.1:9050"
+	request    = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
 		"Host: %s\r\n\r\n"
 )
 
@@ -79,7 +79,7 @@ func (s *StaticFileDownload) run() (err error) {
 func (s *StaticFileDownload) read(r io.Reader) (err error) {
 	var (
 		n      = 0
-		buf    = make([]byte, http_read_len)
+		buf    = make([]byte, httpBufLen)
 		decile = -1
 	)
 
