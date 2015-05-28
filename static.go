@@ -43,7 +43,7 @@ func (s *StaticFileDownload) run() (err error) {
 		return err
 	}
 
-	s.Start = time.Now()
+	s.Start = time.Now() //XXX: Unix timestamp?
 	log.Println("creating socksfied dialer")
 	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
