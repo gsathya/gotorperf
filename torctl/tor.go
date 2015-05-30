@@ -55,11 +55,7 @@ func StartWithConfig(torPath string, c Torrc) (*Tor, error) {
 	}
 
 	t.args = append(t.args, "-f", f.Name())
-	if err = t.start(); err != nil {
-		return nil, err
-	}
-
-	return t, err
+	return t, t.start()
 }
 
 func Start(torPath string) (*Tor, error) {
@@ -70,11 +66,7 @@ func Start(torPath string) (*Tor, error) {
 		false,
 	}
 
-	if err := t.start(); err != nil {
-		return nil, err
-	}
-
-	return t, nil
+	return t, t.start()
 }
 
 func (t *Tor) start() error {
