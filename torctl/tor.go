@@ -24,19 +24,17 @@ type Tor struct {
 	running bool
 }
 
-func NewTor(torPath string) *Tor {
-	return &Tor{
+func StartWithConfig(torPath string, c Torrc) (*Tor, error) {
+	t := &Tor{
 		torPath,
 		make([]string, 0),
 		nil,
 		false,
 	}
-}
 
-func (t *Tor) StartWithConfig(c Torrc) (err error) {
 	f, err := ioutil.TempFile("", "torrc")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() {
 		if ferr := f.Close(); err != nil {
@@ -57,14 +55,29 @@ func (t *Tor) StartWithConfig(c Torrc) (err error) {
 	}
 
 	t.args = append(t.args, "-f", f.Name())
-	return t.startTor()
+	if err = t.start(); err != nil {
+		return nil, err
+	}
+
+	return t, err
 }
 
-func (t *Tor) Start() error {
-	return t.startTor()
+func Start(torPath string) (*Tor, error) {
+	t := &Tor{
+		torPath,
+		make([]string, 0),
+		nil,
+		false,
+	}
+
+	if err := t.start(); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
-func (t *Tor) startTor() error {
+func (t *Tor) start() error {
 	var err error
 	log.Println("starting tor")
 

@@ -120,8 +120,8 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		Dataperctime: make([]time.Duration, 9),
 	}
 
-	t := torctl.NewTor(*c.torPath)
-	if err = t.Start(); err != nil {
+	t, err := torctl.Start(*c.torPath)
+	if err != nil {
 		return nil, err
 	}
 	defer func() {
