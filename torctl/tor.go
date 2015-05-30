@@ -26,10 +26,7 @@ type Tor struct {
 
 func StartWithConfig(torPath string, c Torrc) (*Tor, error) {
 	t := &Tor{
-		torPath,
-		make([]string, 0),
-		nil,
-		false,
+		path: torPath,
 	}
 
 	f, err := ioutil.TempFile("", "torrc")
@@ -60,10 +57,7 @@ func StartWithConfig(torPath string, c Torrc) (*Tor, error) {
 
 func Start(torPath string) (*Tor, error) {
 	t := &Tor{
-		torPath,
-		make([]string, 0),
-		nil,
-		false,
+		path: torPath,
 	}
 
 	return t, t.start()
