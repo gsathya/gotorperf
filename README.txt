@@ -7,5 +7,6 @@ A Go implementation of the original torperf
 Install
 ------
 
+$ go get github.com/gsathya/gotorperf
 $ go install github.com/gsathya/gotorperf
 $ gotorperf -h
