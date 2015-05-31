@@ -9,12 +9,15 @@ import (
 	"time"
 
 	"github.com/gsathya/torperf/torctl"
+	"github.com/yawning/bulb"
 )
 
 const (
-	httpBufLen = 16 // Inherited from the original C codebase
+	httpBufLen = 16 // inherited from the original C codebase
 	uri        = "https://torperf.torproject.org:80/%s"
 	torAddr    = "127.0.0.1:9050"
+	ctrlAddr   = "127.0.0.1:9051"
+	ctrlPort   = "9051"
 	request    = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
 		"Host: %s\r\n\r\n"
 )
@@ -43,7 +46,7 @@ func (s *StaticFileDownload) run() (err error) {
 		return err
 	}
 
-	s.Start = time.Now() //XXX: Unix timestamp?
+	s.Start = time.Now() //XXX: unix timestamp?
 	log.Println("creating socksfied dialer")
 	dialer, err := NewSocksfiedDialer(torAddr)
 	if err != nil {
@@ -62,13 +65,13 @@ func (s *StaticFileDownload) run() (err error) {
 
 	log.Println("sending request")
 	fmt.Fprintf(conn, req)
-	// Get when request is sent
+	// get when request is sent
 	s.Datarequest = time.Since(s.Start)
 
 	if err = s.read(conn); err != nil {
 		return err
 	}
-	// Get when response is complete
+	// get when response is complete
 	s.Datacomplete = time.Since(s.Start)
 
 	log.Println("total size of response", s.Received)
@@ -87,15 +90,15 @@ func (s *StaticFileDownload) read(r io.Reader) (err error) {
 	for {
 		n, err = r.Read(buf)
 
-		// Get when start of response was received
+		// get when start of response was received
 		if n > 0 && s.Received == 0 {
 			s.Dataresponse = time.Since(s.Start)
 		}
 
 		s.Received += n
 
-		// Get when the next 10% of expected bytes are received; this is a
-		// while loop for cases when we expect only very few bytes and read
+		// get when the next 10% of expected bytes are received; this is a
+		// for loop for cases when we expect only very few bytes and read
 		// more than 10% of them in a single read_all() call.
 		for s.Received < s.Expected &&
 			s.Received*10/s.Expected > decile+1 {
@@ -120,7 +123,11 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		Dataperctime: make([]time.Duration, 9),
 	}
 
-	t, err := torctl.Start(*c.torPath)
+	torrc := make(map[string]string)
+	torrc["controlport"] = ctrlPort
+
+	// start tor
+	t, err := torctl.StartWithConfig(*c.torPath, torrc)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +137,53 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		}
 	}()
 
+	// connect to control port
+	ctrlConn, err := bulb.Dial("tcp4", "127.0.0.1:9051")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to control port: %v", err)
+	}
+	defer func() {
+		if cerr := ctrlConn.Close(); err != nil {
+			err = cerr
+		}
+	}()
+
+	// authenticate to controlport
+	if err := ctrlConn.Authenticate(""); err != nil {
+		return nil, fmt.Errorf("Authentication failed: %v", err)
+	}
+	ctrlConn.StartAsyncReader()
+
+	// watch circuit events
+	if _, err := ctrlConn.Request("SETEVENTS CIRC"); err != nil {
+		log.Fatalf("SETEVENTS CIRC failed: %v", err)
+	}
+
+	go func() {
+		for {
+			ev, err := ctrlConn.NextEvent()
+			if err != nil {
+				log.Fatalf("NextEvent() failed: %v", err)
+			}
+			log.Print(ev.Reply)
+		}
+	}()
+
+	time.Sleep(1 * time.Second) // yolo
+
+	// create clean circuits
+	log.Printf("Sending NEWNYM")
+	resp, err := ctrlConn.Request("SIGNAL NEWNYM")
+	if err != nil {
+		log.Fatalf("SIGNAL NEWNYM failed: %v", err)
+	}
+	log.Printf("NEWNYM response: %v", resp)
+
 	if err = s.run(); err != nil {
 		return nil, err
 	}
 
+	time.Sleep(1 * time.Second) // yolo
 	return json.Marshal(s)
 }
 
