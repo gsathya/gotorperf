@@ -37,7 +37,7 @@ type StaticFileDownload struct {
 	Datarequest  time.Duration
 	Dataresponse time.Duration
 	Datacomplete time.Duration
-	Dataperctime []time.Duration
+	Dataperctime [9]time.Duration
 }
 
 func (s *StaticFileDownload) run() (err error) {
@@ -118,9 +118,8 @@ func (s *StaticFileDownload) read(r io.Reader) (err error) {
 
 func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 	s := StaticFileDownload{
-		Uri:          fmt.Sprintf(uri, ".50kbfile"),
-		Expected:     51200,
-		Dataperctime: make([]time.Duration, 9),
+		Uri:      fmt.Sprintf(uri, ".50kbfile"),
+		Expected: 51200,
 	}
 
 	torrc := make(map[string]string)
