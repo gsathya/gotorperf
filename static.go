@@ -68,27 +68,13 @@ func (s *StaticFileDownload) run() (err error) {
 	// get when request is sent
 	s.Datarequest = time.Since(s.Start)
 
-	if err = s.read(conn); err != nil {
-		return err
-	}
-	// get when response is complete
-	s.Datacomplete = time.Since(s.Start)
-
-	log.Println("total size of response", s.Received)
-	log.Println("dataperctime", s.Dataperctime)
-	return
-}
-
-func (s *StaticFileDownload) read(r io.Reader) (err error) {
-	var (
-		n      = 0
-		buf    = make([]byte, httpBufLen)
-		decile = -1
-	)
+	n := 0
+	decile := -1
+	buf := make([]byte, httpBufLen)
 
 	log.Println("reading response")
 	for {
-		n, err = r.Read(buf)
+		n, err = conn.Read(buf)
 
 		// get when start of response was received
 		if n > 0 && s.Received == 0 {
@@ -113,7 +99,13 @@ func (s *StaticFileDownload) read(r io.Reader) (err error) {
 			break
 		}
 	}
-	return nil
+
+	// get when response is complete
+	s.Datacomplete = time.Since(s.Start)
+
+	log.Println("total size of response", s.Received)
+	log.Println("dataperctime", s.Dataperctime)
+	return
 }
 
 func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
