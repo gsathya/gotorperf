@@ -157,6 +157,8 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 				log.Fatalf("NextEvent() failed: %v", err)
 			}
 			log.Print(ev.Reply)
+			e, _ := torctl.NewCircEvent(ev.Reply)
+			log.Print(e)
 		}
 	}()
 

@@ -16,19 +16,22 @@ type Path struct {
 	Nickname    string
 }
 
-func NewCircEvent(line string) (c *CircEvent, err error) {
-	values := strings.SplitN(line, "", 5)
+func NewCircEvent(line string) (*CircEvent, error) {
+	c := &CircEvent{}
+
+	values := strings.SplitN(line, " ", 5)
 	if len(values) < 4 {
 		return nil, fmt.Errorf("Malformed circ event: %s", line)
 	}
 
 	c.Id = values[1]
 	c.Status = values[2]
+	var err error
 	if c.Path, err = parsePath(values[3]); err != nil {
 		return nil, err
 	}
 
-	return
+	return c, nil
 }
 
 func parsePath(p string) ([]Path, error) {
@@ -45,9 +48,9 @@ func parsePath(p string) ([]Path, error) {
 	for _, entry := range strings.Split(p, ",") {
 		switch {
 		case strings.Contains(entry, "="):
-			fp, nick = split("=", entry)
+			fp, nick = split(entry, "=")
 		case strings.Contains(entry, "~"):
-			fp, nick = split("~", entry)
+			fp, nick = split(entry, "~")
 		case entry[0] == '$':
 			fp, nick = entry, ""
 		default:
