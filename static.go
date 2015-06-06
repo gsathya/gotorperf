@@ -145,9 +145,10 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 	}
 	ctrlConn.StartAsyncReader()
 
-	// watch circuit events
-	if _, err := ctrlConn.Request("SETEVENTS CIRC"); err != nil {
-		log.Fatalf("SETEVENTS CIRC failed: %v", err)
+	// watch circuit, stream events
+	cmd := "SETEVENTS CIRC STREAM"
+	if _, err := ctrlConn.Request(cmd); err != nil {
+		log.Print("%s failed: %v", cmd, err)
 	}
 
 	go func() {

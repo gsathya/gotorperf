@@ -9,11 +9,13 @@ type EventType int
 type NewEventFunc func([]string) (Event, error)
 
 var muxer = map[string]NewEventFunc{
-	"CIRC": NewCircEvent,
+	"CIRC":   NewCircEvent,
+	"STREAM": NewStreamEvent,
 }
 
 const (
 	CIRC EventType = iota
+	STREAM
 )
 
 type Event interface {
@@ -50,7 +52,7 @@ func NewCircEvent(values []string) (Event, error) {
 	c := &CircEvent{}
 
 	if len(values) < 3 {
-		return nil, fmt.Errorf("Malformed circ event: %s", values)
+		return nil, fmt.Errorf("malformed circ event: %s", values)
 	}
 
 	c.Id = values[0]
@@ -95,4 +97,29 @@ func parsePath(p string) ([]Path, error) {
 func split(s, sep string) (string, string) {
 	x := strings.SplitN(s, sep, 2)
 	return x[0], x[1]
+}
+
+type StreamEvent struct {
+	Id     string
+	Status string
+	CircId string
+	Target string
+}
+
+func (s StreamEvent) Type() EventType {
+	return STREAM
+}
+
+func NewStreamEvent(values []string) (Event, error) {
+	s := &StreamEvent{}
+
+	if len(values) < 4 {
+		return nil, fmt.Errorf("malformed stream event: %s", values)
+	}
+
+	s.Id = values[0]
+	s.Status = values[1]
+	s.CircId = values[2]
+	s.Target = values[3]
+	return s, nil
 }
