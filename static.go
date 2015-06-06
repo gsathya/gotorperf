@@ -107,7 +107,7 @@ func (s *StaticFileDownload) run() (err error) {
 
 	log.Println("total size of response", s.Received)
 	log.Println("dataperctime", s.Dataperctime)
-	return
+	return nil
 }
 
 func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
@@ -155,21 +155,10 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 
 	go handleEvents(ctrlConn)
 
-	// create clean circuits
-	log.Printf("Sending NEWNYM")
-	resp, err := ctrlConn.Request("SIGNAL NEWNYM")
-	if err != nil {
-		log.Fatalf("SIGNAL NEWNYM failed: %v", err)
-	}
-	log.Printf("NEWNYM response: %v", resp)
-
-	time.Sleep(1 * time.Second) // yolo
-
 	if err = s.run(); err != nil {
 		return nil, err
 	}
 
-	time.Sleep(1 * time.Second) // yolo
 	return json.Marshal(s)
 }
 
@@ -198,7 +187,7 @@ func handleEvents(ctrlConn *bulb.Conn) {
 
 func handleStreamEvent(e *torctl.StreamEvent) {
 	log.Print("StreamEvent: ", *e)
-	if e.Status == "LAUNCHED" {
+	if e.Status == "SETCONNECT" && e.Target == "torperf.torproject.org:80" {
 		streams[e.Id] = e
 	}
 	_, ok := streams[e.Id]

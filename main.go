@@ -67,7 +67,6 @@ func main() {
 			log.Print(err)
 			continue
 		}
-
 		log.Println(string(result))
 	}
 }
