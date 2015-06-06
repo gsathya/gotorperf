@@ -18,9 +18,7 @@ const (
 	STREAM
 )
 
-type Event interface {
-	Type() EventType
-}
+type Event interface{}
 
 func Parse(line string) (Event, error) {
 	values := strings.Split(line, " ")
@@ -42,10 +40,6 @@ type CircEvent struct {
 type Path struct {
 	Fingerprint string
 	Nickname    string
-}
-
-func (c CircEvent) Type() EventType {
-	return CIRC
 }
 
 func NewCircEvent(values []string) (Event, error) {
@@ -104,10 +98,6 @@ type StreamEvent struct {
 	Status string
 	CircId string
 	Target string
-}
-
-func (s StreamEvent) Type() EventType {
-	return STREAM
 }
 
 func NewStreamEvent(values []string) (Event, error) {

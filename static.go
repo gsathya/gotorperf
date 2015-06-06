@@ -23,7 +23,9 @@ const (
 )
 
 var (
-	t *torctl.Tor
+	t       *torctl.Tor
+	circs   = make(map[string]*torctl.CircEvent)
+	streams = make(map[string]*torctl.StreamEvent)
 )
 
 type StaticFileDownload struct {
@@ -139,7 +141,7 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		}
 	}()
 
-	// authenticate to controlport
+	// authenticate controlport
 	if err := ctrlConn.Authenticate(""); err != nil {
 		return nil, fmt.Errorf("Authentication failed: %v", err)
 	}
@@ -151,18 +153,7 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		log.Print("%s failed: %v", cmd, err)
 	}
 
-	go func() {
-		for {
-			ev, err := ctrlConn.NextEvent()
-			if err != nil {
-				log.Fatalf("NextEvent() failed: %v", err)
-			}
-			e, _ := torctl.Parse(ev.Reply)
-			log.Print(e)
-		}
-	}()
-
-	time.Sleep(1 * time.Second) // yolo
+	go handleEvents(ctrlConn)
 
 	// create clean circuits
 	log.Printf("Sending NEWNYM")
@@ -172,12 +163,59 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 	}
 	log.Printf("NEWNYM response: %v", resp)
 
+	time.Sleep(1 * time.Second) // yolo
+
 	if err = s.run(); err != nil {
 		return nil, err
 	}
 
 	time.Sleep(1 * time.Second) // yolo
 	return json.Marshal(s)
+}
+
+func handleEvents(ctrlConn *bulb.Conn) {
+	for {
+		ev, err := ctrlConn.NextEvent()
+		if err != nil {
+			log.Fatalf("NextEvent() failed: %v", err)
+		}
+
+		e, err := torctl.Parse(ev.Reply)
+		if err != nil {
+			log.Print(err)
+		}
+
+		switch e := e.(type) {
+		case *torctl.CircEvent:
+			handleCircEvent(e)
+		case *torctl.StreamEvent:
+			handleStreamEvent(e)
+		default:
+			fmt.Print("Unknow type: %T", e)
+		}
+	}
+}
+
+func handleStreamEvent(e *torctl.StreamEvent) {
+	log.Print("StreamEvent: ", *e)
+	if e.Status == "LAUNCHED" {
+		streams[e.Id] = e
+	}
+	_, ok := streams[e.Id]
+	if !ok {
+		return
+	}
+}
+
+func handleCircEvent(e *torctl.CircEvent) {
+	log.Print("CircEvent: ", *e)
+	if e.Status == "LAUNCHED" {
+		circs[e.Id] = e
+	}
+	_, ok := circs[e.Id]
+	if !ok {
+		return
+	}
 }
 
 func init() {
