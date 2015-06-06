@@ -5,6 +5,32 @@ import (
 	"strings"
 )
 
+type EventType int
+type NewEventFunc func([]string) (Event, error)
+
+var muxer = map[string]NewEventFunc{
+	"CIRC": NewCircEvent,
+}
+
+const (
+	CIRC EventType = iota
+)
+
+type Event interface {
+	Type() EventType
+}
+
+func Parse(line string) (Event, error) {
+	values := strings.Split(line, " ")
+	eventType := values[0]
+	e, ok := muxer[eventType]
+	if !ok {
+		return nil, fmt.Errorf("unknown event: %s", eventType)
+	}
+
+	return e(values[1:])
+}
+
 type CircEvent struct {
 	Id     string
 	Status string
@@ -16,18 +42,21 @@ type Path struct {
 	Nickname    string
 }
 
-func NewCircEvent(line string) (*CircEvent, error) {
+func (c CircEvent) Type() EventType {
+	return CIRC
+}
+
+func NewCircEvent(values []string) (Event, error) {
 	c := &CircEvent{}
 
-	values := strings.SplitN(line, " ", 5)
-	if len(values) < 4 {
-		return nil, fmt.Errorf("Malformed circ event: %s", line)
+	if len(values) < 3 {
+		return nil, fmt.Errorf("Malformed circ event: %s", values)
 	}
 
-	c.Id = values[1]
-	c.Status = values[2]
+	c.Id = values[0]
+	c.Status = values[1]
 	var err error
-	if c.Path, err = parsePath(values[3]); err != nil {
+	if c.Path, err = parsePath(values[2]); err != nil {
 		return nil, err
 	}
 
