@@ -5,25 +5,21 @@ import (
 	"strings"
 )
 
-type EventType int
 type NewEventFunc func([]string) (Event, error)
 
-var muxer = map[string]NewEventFunc{
+var eventMuxer = map[string]NewEventFunc{
 	"CIRC":   NewCircEvent,
 	"STREAM": NewStreamEvent,
 }
 
-const (
-	CIRC EventType = iota
-	STREAM
-)
-
-type Event interface{}
+type Event interface {
+	Type() string
+}
 
 func Parse(line string) (Event, error) {
 	values := strings.Split(line, " ")
 	eventType := values[0]
-	e, ok := muxer[eventType]
+	e, ok := eventMuxer[eventType]
 	if !ok {
 		return nil, fmt.Errorf("unknown event: %s", eventType)
 	}
@@ -40,6 +36,10 @@ type CircEvent struct {
 type Path struct {
 	Fingerprint string
 	Nickname    string
+}
+
+func (c CircEvent) Type() string {
+	return "CIRC"
 }
 
 func NewCircEvent(values []string) (Event, error) {
@@ -98,6 +98,10 @@ type StreamEvent struct {
 	Status string
 	CircId string
 	Target string
+}
+
+func (s StreamEvent) Type() string {
+	return "STREAM"
 }
 
 func NewStreamEvent(values []string) (Event, error) {

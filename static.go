@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gsathya/torperf/torctl"
-	"github.com/yawning/bulb"
 )
 
 const (
@@ -131,77 +130,45 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 	}()
 
 	// connect to control port
-	ctrlConn, err := bulb.Dial("tcp4", "127.0.0.1:9051")
+	conn, err := torctl.Connect(ctrlAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to control port: %v", err)
 	}
 	defer func() {
-		if cerr := ctrlConn.Close(); err != nil {
+		if cerr := conn.Close(); err != nil {
 			err = cerr
 		}
 	}()
-
-	// authenticate controlport
-	if err := ctrlConn.Authenticate(""); err != nil {
-		return nil, fmt.Errorf("Authentication failed: %v", err)
-	}
-	ctrlConn.StartAsyncReader()
-
-	// watch circuit, stream events
-	cmd := "SETEVENTS CIRC STREAM"
-	if _, err := ctrlConn.Request(cmd); err != nil {
-		log.Print("%s failed: %v", cmd, err)
-	}
-
-	go handleEvents(ctrlConn)
 
 	if err = s.run(); err != nil {
 		return nil, err
 	}
 
+	log.Print("Finished experiment")
 	return json.Marshal(s)
 }
 
-func handleEvents(ctrlConn *bulb.Conn) {
-	for {
-		ev, err := ctrlConn.NextEvent()
-		if err != nil {
-			log.Fatalf("NextEvent() failed: %v", err)
-		}
+func handleStreamEvent(e torctl.Event) {
+	ev := e.(torctl.StreamEvent)
 
-		e, err := torctl.Parse(ev.Reply)
-		if err != nil {
-			log.Print(err)
-		}
-
-		switch e := e.(type) {
-		case *torctl.CircEvent:
-			handleCircEvent(e)
-		case *torctl.StreamEvent:
-			handleStreamEvent(e)
-		default:
-			fmt.Print("Unknow type: %T", e)
-		}
+	log.Print("StreamEvent: ", ev)
+	if ev.Status == "SETCONNECT" && ev.Target == "torperf.torproject.org:80" {
+		streams[ev.Id] = &ev
 	}
-}
-
-func handleStreamEvent(e *torctl.StreamEvent) {
-	log.Print("StreamEvent: ", *e)
-	if e.Status == "SETCONNECT" && e.Target == "torperf.torproject.org:80" {
-		streams[e.Id] = e
-	}
-	_, ok := streams[e.Id]
+	_, ok := streams[ev.Id]
 	if !ok {
 		return
 	}
 }
 
-func handleCircEvent(e *torctl.CircEvent) {
-	log.Print("CircEvent: ", *e)
-	if e.Status == "LAUNCHED" {
-		circs[e.Id] = e
+func handleCircEvent(e torctl.Event) {
+	ev := e.(torctl.CircEvent)
+
+	log.Print("CircEvent: ", ev)
+	if ev.Status == "LAUNCHED" {
+		circs[ev.Id] = &ev
 	}
-	_, ok := circs[e.Id]
+	_, ok := circs[ev.Id]
 	if !ok {
 		return
 	}
