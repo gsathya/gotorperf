@@ -19,7 +19,9 @@ type Conn struct {
 
 func Connect(ctrlAddr string) (*Conn, error) {
 	var err error
-	c := &Conn{}
+	c := &Conn{
+		muxer: make(map[string]EventHandler),
+	}
 
 	c.c, err = bulb.Dial("tcp4", ctrlAddr)
 	if err != nil {
@@ -31,6 +33,7 @@ func Connect(ctrlAddr string) (*Conn, error) {
 		return nil, fmt.Errorf("Authentication failed: %v", err)
 	}
 
+	c.c.StartAsyncReader()
 	go c.handler()
 	return c, nil
 }
@@ -44,6 +47,7 @@ func (c *Conn) On(et string, eh EventHandler) error {
 	c.events = append(c.events, et)
 
 	cmd := fmt.Sprintf("SETEVENTS %s", strings.Join(c.events, " "))
+	fmt.Println(cmd)
 	if _, err := c.c.Request(cmd); err != nil {
 		return err
 	}
@@ -54,8 +58,6 @@ func (c *Conn) On(et string, eh EventHandler) error {
 
 //XXX: leaky!
 func (c *Conn) handler() {
-	c.c.StartAsyncReader()
-
 	for {
 		select {
 		default:

@@ -140,6 +140,14 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		}
 	}()
 
+	// set up event handlers
+	if err = conn.On("CIRC", handleCircEvent); err != nil {
+		return nil, err
+	}
+	if err = conn.On("STREAM", handleStreamEvent); err != nil {
+		return nil, err
+	}
+
 	if err = s.run(); err != nil {
 		return nil, err
 	}
@@ -149,11 +157,11 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 }
 
 func handleStreamEvent(e torctl.Event) {
-	ev := e.(torctl.StreamEvent)
+	ev := e.(*torctl.StreamEvent)
 
 	log.Print("StreamEvent: ", ev)
 	if ev.Status == "SETCONNECT" && ev.Target == "torperf.torproject.org:80" {
-		streams[ev.Id] = &ev
+		streams[ev.Id] = ev
 	}
 	_, ok := streams[ev.Id]
 	if !ok {
@@ -162,11 +170,11 @@ func handleStreamEvent(e torctl.Event) {
 }
 
 func handleCircEvent(e torctl.Event) {
-	ev := e.(torctl.CircEvent)
+	ev := e.(*torctl.CircEvent)
 
 	log.Print("CircEvent: ", ev)
 	if ev.Status == "LAUNCHED" {
-		circs[ev.Id] = &ev
+		circs[ev.Id] = ev
 	}
 	_, ok := circs[ev.Id]
 	if !ok {
