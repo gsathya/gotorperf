@@ -12,15 +12,14 @@ type EventHandler func(e Event)
 
 type Conn struct {
 	c      *bulb.Conn
-	muxer  map[string]EventHandler
-	done   chan struct{}
+	muxer  map[EventType]EventHandler
 	events []string
 }
 
 func Connect(ctrlAddr string) (*Conn, error) {
 	var err error
 	c := &Conn{
-		muxer: make(map[string]EventHandler),
+		muxer: make(map[EventType]EventHandler),
 	}
 
 	c.c, err = bulb.Dial("tcp4", ctrlAddr)
@@ -39,12 +38,11 @@ func Connect(ctrlAddr string) (*Conn, error) {
 }
 
 func (c *Conn) Close() error {
-	//c.done <- struct{}{}
 	return c.c.Close()
 }
 
-func (c *Conn) On(et string, eh EventHandler) error {
-	c.events = append(c.events, et)
+func (c *Conn) On(et EventType, eh EventHandler) error {
+	c.events = append(c.events, et.String())
 
 	cmd := fmt.Sprintf("SETEVENTS %s", strings.Join(c.events, " "))
 	fmt.Println(cmd)
@@ -59,31 +57,26 @@ func (c *Conn) On(et string, eh EventHandler) error {
 //XXX: leaky!
 func (c *Conn) handler() {
 	for {
-		select {
-		default:
-			ev, err := c.c.NextEvent()
+		ev, err := c.c.NextEvent()
 
-			if err != nil {
-				log.Fatalf("NextEvent() failed: %v", err)
-			}
-
-			e, err := Parse(ev.Reply)
-			if err != nil {
-				log.Print(err)
-				continue
-			}
-
-			t := e.Type()
-			f, ok := c.muxer[t]
-			if !ok {
-				fmt.Print("Unknow type: %T", t)
-				continue
-			}
-
-			f(e)
-		case <-c.done:
-			return
+		if err != nil {
+			log.Fatalf("NextEvent() failed: %v", err)
 		}
+
+		e, err := Parse(ev.Reply)
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+
+		t := e.Type()
+		f, ok := c.muxer[t]
+		if !ok {
+			fmt.Print("Unknow type: %T", t)
+			continue
+		}
+
+		f(e)
 	}
 
 }

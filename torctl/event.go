@@ -5,7 +5,24 @@ import (
 	"strings"
 )
 
+type EventType int
 type NewEventFunc func([]string) (Event, error)
+
+const (
+	CIRC EventType = iota
+	STREAM
+)
+
+func (et EventType) String() string {
+	switch et {
+	case CIRC:
+		return "CIRC"
+	case STREAM:
+		return "STREAM"
+	default:
+		return "UNKNOWN" //XXX: wat
+	}
+}
 
 var eventMuxer = map[string]NewEventFunc{
 	"CIRC":   NewCircEvent,
@@ -13,7 +30,7 @@ var eventMuxer = map[string]NewEventFunc{
 }
 
 type Event interface {
-	Type() string
+	Type() EventType
 }
 
 func Parse(line string) (Event, error) {
@@ -38,8 +55,8 @@ type Path struct {
 	Nickname    string
 }
 
-func (c CircEvent) Type() string {
-	return "CIRC"
+func (c CircEvent) Type() EventType {
+	return CIRC
 }
 
 func NewCircEvent(values []string) (Event, error) {
@@ -100,8 +117,8 @@ type StreamEvent struct {
 	Target string
 }
 
-func (s StreamEvent) Type() string {
-	return "STREAM"
+func (s StreamEvent) Type() EventType {
+	return STREAM
 }
 
 func NewStreamEvent(values []string) (Event, error) {

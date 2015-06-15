@@ -141,10 +141,10 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 	}()
 
 	// set up event handlers
-	if err = conn.On("CIRC", handleCircEvent); err != nil {
+	if err = conn.On(torctl.CIRC, handleCircEvent); err != nil {
 		return nil, err
 	}
-	if err = conn.On("STREAM", handleStreamEvent); err != nil {
+	if err = conn.On(torctl.STREAM, handleStreamEvent); err != nil {
 		return nil, err
 	}
 
