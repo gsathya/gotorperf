@@ -26,7 +26,7 @@ func (et EventType) String() string {
 	return s
 }
 
-var eventMuxer = map[string]NewEventFunc{
+var newEventMuxer = map[string]NewEventFunc{
 	"CIRC":   NewCircEvent,
 	"STREAM": NewStreamEvent,
 }
@@ -38,7 +38,7 @@ type Event interface {
 func Parse(line string) (Event, error) {
 	values := strings.Split(line, " ")
 	eventType := values[0]
-	e, ok := eventMuxer[eventType]
+	e, ok := newEventMuxer[eventType]
 	if !ok {
 		return nil, fmt.Errorf("unknown event: %s", eventType)
 	}
