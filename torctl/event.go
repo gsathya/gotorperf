@@ -13,15 +13,17 @@ const (
 	STREAM
 )
 
+var eventTypeToString = map[EventType]string{
+	CIRC:   "CIRC",
+	STREAM: "STREAM",
+}
+
 func (et EventType) String() string {
-	switch et {
-	case CIRC:
-		return "CIRC"
-	case STREAM:
-		return "STREAM"
-	default:
-		return "UNKNOWN" //XXX: wat
+	s, ok := eventTypeToString[et]
+	if !ok {
+		return ""
 	}
+	return s
 }
 
 var eventMuxer = map[string]NewEventFunc{
