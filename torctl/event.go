@@ -1,3 +1,4 @@
+//go:generate stringer -type=EventType
 package torctl
 
 import (
@@ -12,19 +13,6 @@ const (
 	CIRC EventType = iota
 	STREAM
 )
-
-var eventTypeToString = map[EventType]string{
-	CIRC:   "CIRC",
-	STREAM: "STREAM",
-}
-
-func (et EventType) String() string {
-	s, ok := eventTypeToString[et]
-	if !ok {
-		return ""
-	}
-	return s
-}
 
 var newEventMuxer = map[string]NewEventFunc{
 	"CIRC":   NewCircEvent,
