@@ -14,7 +14,7 @@ import (
 const (
 	httpBufLen = 16 // inherited from the original C codebase
 	uri        = "https://torperf.torproject.org:80/%s"
-	torAddr    = "127.0.0.1:9050"
+	socksAddr  = "127.0.0.1:9050"
 	ctrlAddr   = "127.0.0.1:9051"
 	ctrlPort   = "9051"
 	request    = "GET %s HTTP/1.0\r\nPragma: no-cache\r\n" +
@@ -49,7 +49,7 @@ func (s *StaticFileDownload) run() (err error) {
 
 	s.Start = time.Now() //XXX: unix timestamp?
 	log.Println("creating socksfied dialer")
-	dialer, err := NewSocksfiedDialer(torAddr)
+	dialer, err := NewSocksfiedDialer(socksAddr)
 	if err != nil {
 		return err
 	}
@@ -148,6 +148,7 @@ func StaticFileExperimentRunner(c *Config) (result []byte, err error) {
 		return nil, err
 	}
 
+	// start experiment
 	if err = s.run(); err != nil {
 		return nil, err
 	}
